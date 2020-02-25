@@ -15,6 +15,7 @@ import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.ArrayList;
+
 import javax.imageio.ImageIO;
 import javax.swing.Timer;
 
@@ -27,7 +28,9 @@ public class VentanaJuego extends javax.swing.JFrame {
     int filasMarcianos = 5;
     int columnasMarcianos = 10;
     int contador = 0;
-
+    int velocidad=1;//velodidad de los marcinos
+    
+    
     BufferedImage buffer = null;
     //buffer para guardar las imágenes de todos los marcianos
     BufferedImage plantilla = null;
@@ -49,7 +52,7 @@ public class VentanaJuego extends javax.swing.JFrame {
     ArrayList <Explosion> listaExplosiones = new ArrayList();
     
     //el array de dos dimensiones que guarda la lista de marcianos
-    Marciano[][] listaMarcianos = new Marciano[filasMarcianos][columnasMarcianos];
+    ArrayList<Marciano> listaMarcianos=new ArrayList();//creo el ArrayList de Marcianos
     //dirección en la que se mueve el grupo de marcianos
     boolean direccionMarcianos = false;
     /**
@@ -71,10 +74,11 @@ public class VentanaJuego extends javax.swing.JFrame {
                 
             }
         }
-        imagenes[20] = plantilla.getSubimage(0, 320, 66, 32); //sprite de la nave
-        imagenes[21] = plantilla.getSubimage(66, 320, 64, 32);
-        imagenes[23] = plantilla.getSubimage(255, 320, 32, 32);//explosion parteB
-        imagenes[22] = plantilla.getSubimage(255, 289, 32, 32);//explosion parteA
+        imagenes[20]=plantilla.getSubimage(0, 320, 66, 32);//sprite nave extraña
+        imagenes[21]=plantilla.getSubimage(66, 320, 64, 32);//sprite nave
+        imagenes[22]=plantilla.getSubimage(255, 320, 32, 32);//sprite explosion marciano 1
+        imagenes[23]=plantilla.getSubimage(255, 289, 32, 32);//sprite explosion marciano 2
+        imagenes[24]=plantilla.getSubimage(132, 320, 64, 32);//sprite explosion nave
         
                 
         setSize(ANCHOPANTALLA, ALTOPANTALLA);
@@ -89,39 +93,77 @@ public class VentanaJuego extends javax.swing.JFrame {
         //creamos el array de marcianos
         for (int i = 0; i < filasMarcianos; i++) {
             for (int j = 0; j < columnasMarcianos; j++) {
-                listaMarcianos[i][j] = new Marciano(ANCHOPANTALLA);
-                listaMarcianos[i][j].imagen1 = imagenes[2*i];
-                listaMarcianos[i][j].imagen2 = imagenes[2*i+1];
-                listaMarcianos[i][j].posX = j * (15 + listaMarcianos[i][j].imagen1.getWidth(null));
-                listaMarcianos[i][j].posY = i * (10 + listaMarcianos[i][j].imagen1.getHeight(null));
+               Marciano m=new Marciano(ANCHOPANTALLA);
+                
+                m.imagen1 = imagenes[2 * i];
+                m.imagen2 = imagenes[2 * i + 1];
+                m.posX = j * (15 + m.imagen1.getWidth(null));
+                m.posY = i * (10 + m.imagen1.getHeight(null));
+                listaMarcianos.add(m);
             }
         }
-        miDisparo.posY = -2000;
 
     }
-
     private void pintaMarcianos(Graphics2D _g2) {
 
-        for (int i = 0; i < filasMarcianos; i++) {
-            for (int j = 0; j < columnasMarcianos; j++) {
-                listaMarcianos[i][j].mueve(direccionMarcianos);
-                if (contador < 50) {
-                    _g2.drawImage(listaMarcianos[i][j].imagen1, listaMarcianos[i][j].posX, listaMarcianos[i][j].posY, null);
-                } else if (contador < 100) {
-                    _g2.drawImage(listaMarcianos[i][j].imagen2, listaMarcianos[i][j].posX, listaMarcianos[i][j].posY, null);
-                } else {
-                    contador = 0;
-                }
-                
-                if (listaMarcianos[i][j].posX == ANCHOPANTALLA - listaMarcianos[i][j].imagen1.getWidth(null) || listaMarcianos[i][j].posX == 0) {
-                    direccionMarcianos = !direccionMarcianos;
-                    for (int k = 0; k < filasMarcianos; k++) {
-                        for (int m = 0; m < columnasMarcianos; m++) {
-                            listaMarcianos[k][m].posY += listaMarcianos[k][m].imagen1.getHeight(null);
-                        }
-                    }
-                }
+        Marciano marcianoAux;
+        
+        boolean cambia=false;
+        
+        velocidad();
+        
+        for (int i = 0; i < listaMarcianos.size(); i++) {
+            
+            marcianoAux=listaMarcianos.get(i);
+            
+            marcianoAux._velocidad=velocidad;//cambia la velocidad
+            marcianoAux.mueve(direccionMarcianos);
+            
+            if((marcianoAux.posX+marcianoAux.imagen1.getWidth(this))>=ANCHOPANTALLA || marcianoAux.posX<=0){
+                cambia=true;
             }
+            
+            marcianoAux.vida--;
+            
+            if (marcianoAux.vida>25){
+                _g2.drawImage(marcianoAux.imagen1, marcianoAux.posX, marcianoAux.posY, null);//dibujo la explosion1
+            }
+            else{
+                _g2.drawImage(marcianoAux.imagen2, marcianoAux.posX, marcianoAux.posY, null);//dibujo la explosion2
+            }
+        }
+        
+        if (cambia) {
+            direccionMarcianos=!direccionMarcianos;
+            for (int i = 0; i < listaMarcianos.size(); i++) {
+                
+                marcianoAux=listaMarcianos.get(i);
+                marcianoAux.posY+=marcianoAux.imagen1.getHeight(this);
+            }
+        }
+    }
+    
+    private void fin(Graphics2D _g2){
+        for (int i = 0; i < listaMarcianos.size(); i++) {
+            
+            if ((listaMarcianos.get(i).posY + listaMarcianos.get(i).imagen1.getHeight(null)) > miNave.posY) {
+                temporizador.stop();
+                miNave.imagen=imagenes[24];
+                _g2.drawImage(miNave.imagen, miNave.posX, miNave.posY, null);//dibujo la explosion de la nave
+                
+            }
+        }
+    }
+    
+    private void velocidad(){//Varíamos la velocidad de los marcianos en función de los que quedan        
+        if (listaMarcianos.size() == 1) {//Si queda un marciano
+            velocidad = 8;
+        } else if (listaMarcianos.size() <= 13) {//Si quedan menos de 13 marcianos
+            velocidad = 3;
+        } else if (listaMarcianos.size() <= 40) {//Si quedan menos de 13 marcianos
+            velocidad = 2;
+        } else {//Si quedan más de dos tercios de marcianos
+            velocidad = 1;
         }
     }
 
@@ -140,6 +182,8 @@ public class VentanaJuego extends javax.swing.JFrame {
             }
         }
     }
+    
+    
 
     //Pinta la explosiones
     private void pintaExplosiones(Graphics2D g2) {
@@ -150,55 +194,49 @@ public class VentanaJuego extends javax.swing.JFrame {
             explosionAux = listaExplosiones.get(i);
 
             explosionAux.tiempoDeVida--;
-            if (explosionAux.tiempoDeVida > 33) {
+            if (explosionAux.tiempoDeVida > 10) {
                 g2.drawImage(explosionAux.imagen1, explosionAux.posX, explosionAux.posY, null);
-            } else if (explosionAux.tiempoDeVida > 17) {
+            }
+            else {
                 g2.drawImage(explosionAux.imagen2, explosionAux.posX, explosionAux.posY, null);
-            } else {
-                g2.drawImage(explosionAux.imagen3, explosionAux.posX, explosionAux.posY, null);
             }
             if (explosionAux.tiempoDeVida <= 0) {
                 listaExplosiones.remove(i);
+                
             }
         }
     }
 
     //Chequea si un disparo y un marciano colisionan
     private void chequeaColision() {
-        Rectangle2D.Double rectanguloMarciano = new Rectangle2D.Double();
-        Rectangle2D.Double rectanguloDisparo = new Rectangle2D.Double();
-
-         for (int k = 0; k < listaDisparos.size(); k++) {
-            //calculo el rectangulo que contiene al disparo correspondiente
-            rectanguloDisparo.setFrame(listaDisparos.get(k).posX,
-                    listaDisparos.get(k).posY,
-                    listaDisparos.get(k).imagen.getWidth(null),
-                    listaDisparos.get(k).imagen.getHeight(null));
-
-            for (int i = 0; i < filasMarcianos; i++) {
-                for (int j = 0; j < columnasMarcianos; j++) {
-                    //calculo el rectángulo corresponmdiente al marciano que estoy comprobando
-                    rectanguloMarciano.setFrame(listaMarcianos[i][j].posX,
-                            listaMarcianos[i][j].posY,
-                            listaMarcianos[i][j].imagen1.getWidth(null),
-                            listaMarcianos[i][j].imagen1.getHeight(null)
-                    );
-                if (rectanguloDisparo.intersects(rectanguloMarciano)) {//Si entra aquí es porque han chocado
+         Rectangle2D.Double rectanguloMarciano=new Rectangle2D.Double();
+        Rectangle2D.Double rectanguloDisparo=new Rectangle2D.Double();
+        
+        for (int k=0; k<listaDisparos.size(); k++){
+            
+            rectanguloDisparo.setFrame(listaDisparos.get(k).posX, listaDisparos.get(k).posY, listaDisparos.get(k).imagen.getWidth(null), listaDisparos.get(k).imagen.getHeight(null));//calculo el rectangulo que contiene al disparo
+            
+            for (int i = 0; i < listaMarcianos.size(); i++) {
+                
+                rectanguloMarciano.setFrame(listaMarcianos.get(i).posX, listaMarcianos.get(i).posY, listaMarcianos.get(i).imagen1.getWidth(null), listaMarcianos.get(i).imagen1.getHeight(null));//calculo el rectangulo que contiene a cada marciano
+                
+                if(rectanguloDisparo.intersects(rectanguloMarciano)){//si entra aqui es porque ha chocado un disparo y un marciano
                     
-                        Explosion e = new Explosion();
-                        e.posX = listaMarcianos[i][j].posX;
-                        e.posY = listaMarcianos[i][j].posY;
-                        e.imagen1 = imagenes[23];
-                        e.imagen2 = imagenes[22];
-                        listaExplosiones.add(e);
-                        e.sonidoExplosion.start(); //suena el sonido
-                        listaMarcianos[i][j].posY = 2000;
-                       listaDisparos.remove(k);
+                    Explosion e=new Explosion();
+                    e.posX=listaMarcianos.get(i).posX;
+                    e.posY=listaMarcianos.get(i).posY;
+                    e.imagen1=imagenes[23];//pongo la imagen de la explosion
+                    e.imagen2=imagenes[22];
+                    listaExplosiones.add(e);
+                    e.sonidoExplosion.start();//suena el audio
+                    
+                    listaMarcianos.remove(i);
+                    
+                    listaDisparos.remove(k);//elimino el disparo que ha dado a un marciano
                 }
             }
-
+            
         }
-    }
 }
 
     private void bucleDelJuego() {
@@ -210,15 +248,17 @@ public class VentanaJuego extends javax.swing.JFrame {
         g2.setColor(Color.BLACK);
         g2.fillRect(0, 0, ANCHOPANTALLA, ALTOPANTALLA);
 
-        contador++;
+        
         /////////////////////////////////
         pintaMarcianos(g2);
         //Dibujo la nave
-        g2.drawImage(miNave.imagen, miNave.posX, miNave.posY, null);
+        
         pintaDisparos(g2);
         pintaExplosiones(g2);
+        g2.drawImage(miNave.imagen, miNave.posX, miNave.posY, null);
         miNave.mueve();
         chequeaColision();
+        fin(g2);
 
         /////////////////////////////////
         //dibujo de golpe todo el buffer sobre el jPanel1
